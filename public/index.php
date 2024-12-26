@@ -2,28 +2,33 @@
 $title = "Home";
 include './header.php';
 
+//NON-VULNERABLE: BLACKLIST 2
 function getUserIP() {
-  if (!empty($_GET['ip'])) {
-      return $_GET['ip']; // ip parametresi kontrol ediliyor
-  } elseif (!empty($_SERVER['HTTP_CLIENT_IP'])) {
-      return $_SERVER['HTTP_CLIENT_IP'];
-  } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-      return explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0];
-  } else {
-      return $_SERVER['REMOTE_ADDR'];
-  }
+    if (!empty($_GET['ip']) && filter_var($_GET['ip'], FILTER_VALIDATE_IP)) {
+        return $_GET['ip']; // Validate the IP parameter
+    } elseif (!empty($_SERVER['HTTP_CLIENT_IP']) && filter_var($_SERVER['HTTP_CLIENT_IP'], FILTER_VALIDATE_IP)) {
+        return $_SERVER['HTTP_CLIENT_IP'];
+    } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        $ipList = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+        foreach ($ipList as $ip) {
+            $ip = trim($ip);
+            if (filter_var($ip, FILTER_VALIDATE_IP)) {
+                return $ip;
+            }
+        }
+    }
+    return filter_var($_SERVER['REMOTE_ADDR'], FILTER_VALIDATE_IP) ? $_SERVER['REMOTE_ADDR'] : '0.0.0.0';
 }
 
-// Kullanıcının IP adresini al
+// Get the user's IP address
 $user_ip = getUserIP();
 
-// Kara listeye alınacak IP adresleri
-$blacklist = ['192.168.1.109', '192.168.56.1', '88.230.79.90']; // Arkadaşınızın IP'sini buraya ekleyin
+// Blacklisted IP addresses
+$blacklist = ['192.168.1.109', '192.168.56.1', '88.230.79.90']; // Add specific IPs to the blacklist
 
-if (!$user_ip === "127.0.0.1" || in_array($user_ip, $blacklist)) {
-  die("Erişim yasaklandı: $user_ip adresi kara listededir.");
+if ($user_ip !== "127.0.0.1" && in_array($user_ip, $blacklist)) {
+    die("Access denied: $user_ip is blacklisted.");
 }
-
 ?>
 
 <!-- Hero Section -->

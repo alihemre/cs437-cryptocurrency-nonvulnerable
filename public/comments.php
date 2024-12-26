@@ -3,9 +3,9 @@
 include './header.php'; 
 $title = "Comment";
 // Database connection
-$servername = "127.0.0.1";
+$servername = "mysql-container";
 $username = "root";
-$password = "";
+$password = "aliemre3169";
 $dbname = "news_site";
 $port = 3306;
 
@@ -30,7 +30,7 @@ if ($conn->query($sql) === true) {
 // Ensure UTF-8 compatibility
 $conn->set_charset("utf8mb4"); // UTF-8mb4 for full compatibility with special characters
 
-// Initialize variables
+//NON-VULNERABLE: WITH PARSING METHODS  Initialize variables
 $name = isset($_POST['name']) ? htmlspecialchars(trim($_POST['name'])) : '';
 $comment = isset($_POST['comment']) ? htmlspecialchars(trim($_POST['comment'])) : '';
 $message = "";
@@ -150,6 +150,7 @@ $conn->close();
         <?php if (!empty($comments)): ?>
             <?php foreach ($comments as $comment): ?>
                 <div class="comment-item">
+                <!-- NON-VULNERABLE: PARSE IT WHEN RENDERING THE COMMENTS -->
                     <strong><?php echo htmlspecialchars($comment['Name']); ?></strong>
                     <p><?php echo htmlspecialchars($comment['Message']); ?></p>
                 </div>

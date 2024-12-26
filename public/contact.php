@@ -1,18 +1,17 @@
-<!-- public/contact.php -->
 <?php
 include './header.php'; 
 $title = "Contact";
 
-// Insecurely handling form input
-$name = isset($_POST['name']) ? $_POST['name'] : '';
-$email = isset($_POST['email']) ? $_POST['email'] : '';
-$message = isset($_POST['message']) ? $_POST['message'] : '';
+// NON-VULNERABLE: Securely handling form input using htmlspecialchars to prevent XSS
+$name = isset($_POST['name']) ? htmlspecialchars(trim($_POST['name']), ENT_QUOTES, 'UTF-8') : '';
+$email = isset($_POST['email']) ? htmlspecialchars(trim($_POST['email']), ENT_QUOTES, 'UTF-8') : '';
+$message = isset($_POST['message']) ? htmlspecialchars(trim($_POST['message']), ENT_QUOTES, 'UTF-8') : '';
 ?>
 
 <main class="contact-main">
   <h2>Contact Us</h2>
 
-  <?php if ($_SERVER['REQUEST_METHOD'] === 'POST'): ?>
+  <?php if ($_SERVER['REQUEST_METHOD'] === 'POST' && $name && $email && $message): ?>
     <div class="user-input">
       <p>Thank you, <strong><?php echo $name; ?></strong>!</p>
       <p>We have received your message: <em><?php echo $message; ?></em></p>
@@ -39,4 +38,4 @@ $message = isset($_POST['message']) ? $_POST['message'] : '';
   </form>
 </main>
 
-<?php include './footer.php'; ?>  
+<?php include './footer.php'; ?>

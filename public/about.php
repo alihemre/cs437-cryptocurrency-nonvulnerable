@@ -3,13 +3,8 @@ include './header.php';
 
 $title = "About";
 
-// Default role setup if cookie is not set
-if (!isset($_COOKIE['user_role'])) {
-    setcookie('user_role', 'User', time() + 3600, '/'); // Default role: User
-}
-
-// Read role from cookie
-$userRole = $_COOKIE['user_role'] ?? 'User';
+// NON-VULNERABLE: KEEPING THE DATA IN SERVER MAKE THE ROLE OF THE USER UNCHANGABLE FROM CLIENT 
+$userRole = $_SESSION['user_role'] ?? 'User';
 ?>
 
 <main class="about-main">

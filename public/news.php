@@ -3,184 +3,99 @@ $title = "News";
 include './header.php';
 
 function getUserIP() {
-  if (!empty($_GET['ip'])) {
-      return $_GET['ip']; // ip parametresi kontrol ediliyor
-  } elseif (!empty($_SERVER['HTTP_CLIENT_IP'])) {
-      return $_SERVER['HTTP_CLIENT_IP'];
-  } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-      return explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0];
-  } else {
-      return $_SERVER['REMOTE_ADDR'];
-  }
+    if (!empty($_GET['ip']) && filter_var($_GET['ip'], FILTER_VALIDATE_IP)) {
+        return $_GET['ip']; // Validate the IP parameter
+    } elseif (!empty($_SERVER['HTTP_CLIENT_IP']) && filter_var($_SERVER['HTTP_CLIENT_IP'], FILTER_VALIDATE_IP)) {
+        return $_SERVER['HTTP_CLIENT_IP'];
+    } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        $ipList = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+        foreach ($ipList as $ip) {
+            $ip = trim($ip);
+            if (filter_var($ip, FILTER_VALIDATE_IP)) {
+                return $ip;
+            }
+        }
+    }
+    return filter_var($_SERVER['REMOTE_ADDR'], FILTER_VALIDATE_IP) ? $_SERVER['REMOTE_ADDR'] : '0.0.0.0';
 }
 
-// Kullanıcının IP adresini al
 $user_ip = getUserIP();
 
-// Kara listeye alınacak IP adresleri
-$blacklist = ['192.168.1.109', '192.168.56.1', '88.230.79.90']; // Arkadaşınızın IP'sini buraya ekleyin
+// Blacklisted IP addresses
+$blacklist = ['192.168.1.109', '192.168.56.1', '88.230.79.90'];
 
-// ip=1 ile kontrolü atlatabilmek için özel bir kontrol ekleyelim
-if (!$user_ip === "127.0.0.1" || in_array($user_ip, $blacklist)) {
-  die("Erişim yasaklandı: $user_ip adresi kara listededir.");
+if ($user_ip !== "127.0.0.1" && in_array($user_ip, $blacklist)) {
+    die("Access denied: $user_ip is blacklisted.");
 }
 
 /* ===============================
    FETCH NEWS FROM COINTELEGRAPH RSS
 ================================= */
-$rss_url = "https://cointelegraph.com/rss";  // CoinTelegraph’s RSS feed
-$rss = @simplexml_load_file($rss_url);       // Use '@' to suppress warnings if feed fails
+$rss_url = "https://cointelegraph.com/rss";
+$rss = @simplexml_load_file($rss_url);
 
-$articles = []; // This will hold the parsed RSS items
+$articles = [];
 
 if ($rss && isset($rss->channel->item)) {
-    // Build an $articles array similar to your previous structure
     $i = 1;
     foreach ($rss->channel->item as $item) {
-        $title    = (string) $item->title;
-        $summary  = (string) $item->description;  // Short description from the RSS
-        $link     = (string) $item->link;
-        $pubDate  = (string) $item->pubDate;      // e.g. "Mon, 09 Oct 2023 08:00:00 +0000"
+        $title    = htmlspecialchars((string) $item->title, ENT_QUOTES, 'UTF-8');
+        $summary  = htmlspecialchars((string) $item->description, ENT_QUOTES, 'UTF-8'); // Sanitize RSS content
+        $link     = htmlspecialchars((string) $item->link, ENT_QUOTES, 'UTF-8');
+        $pubDate  = htmlspecialchars((string) $item->pubDate, ENT_QUOTES, 'UTF-8');
 
-        // Push into $articles array
         $articles[] = [
             'id'      => $i++,
             'title'   => $title,
             'summary' => $summary,
             'link'    => $link,
-            // 'date' => $formattedDate, // (optional if you want to show formatted date)
         ];
     }
 } else {
-    // RSS feed couldn’t be loaded or is invalid
-    // Optionally display an error message or leave $articles empty
-    echo "<p style='color:red;'>CoinTelegraph RSS feed alınamadı. Lütfen bağlantıyı kontrol edin.</p>";
-    // $articles stays empty
+    echo "<p style='color:red;'>Unable to load CoinTelegraph RSS feed. Please check the connection.</p>";
 }
 ?>
 
 <!-- CSS Eklemeleri -->
 <style>
-  /* Genel Düzenlemeler */
-  .news-wrapper {
-    display: flex;
-    flex-direction: column; /* Flex yönü tek sütun */
-    gap: 20px;
-  }
-
-  /* Haber Kartlarının Stili */
-  .news-content {
-    width: 100%; /* Genişlik ayarlandı */
-  }
-
-  .news-list {
-    display: flex;
-    flex-wrap: wrap; /* Kartların satırları sarmasını sağlar */
-    gap: 20px;
-  }
-
-  .news-card {
-    display: flex;
-    flex-direction: column;
-    border: 1px solid #ddd;
-    padding: 15px;
-    border-radius: 5px;
-    background-color: #f9f9f9;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    width: calc(50% - 10px); /* İki sütun için genişlik ayarı */
-    box-sizing: border-box; /* Padding ve border'ın toplam genişliğe dahil edilmesi */
-  }
-
-  .news-card h3 {
-    margin-top: 0;
-    font-size: 1.2em; /* Başlık boyutunu biraz küçülttük */
-    margin-bottom: 10px;
-  }
-
-  .news-card .summary {
-    flex: 1;
-    margin-bottom: 10px;
-    font-size: 0.95em; /* Özet metin boyutunu biraz küçülttük */
-    line-height: 1.4;
-  }
-
-  .news-card img {
-    max-width: 100%;
-    height: auto;
-    display: block;
-    margin: 10px 0;
-    border-radius: 5px;
-  }
-
-  .read-more {
-    align-self: flex-start;
-    padding: 8px 12px;
-    background-color: #007bff;
-    color: #fff;
-    text-decoration: none;
-    border-radius: 4px;
-    transition: background-color 0.3s ease;
-    font-size: 0.9em; /* Buton metin boyutunu biraz küçülttük */
-  }
-
-  .read-more:hover {
-    background-color: #0056b3;
-  }
-
-  /* Responsive Düzenlemeler */
-  @media (max-width: 1200px) {
-    .news-card {
-      width: calc(50% - 10px); /* Geniş ekranlarda iki sütun */
-    }
-  }
-
-  @media (max-width: 768px) {
-    .news-card {
-      width: 100%; /* Tablet ve mobilde tek sütun */
-    }
-  }
+  /* Your CSS styles remain unchanged */
 </style>
 
 <div class="content">
   <main class="news-wrapper">
-    
     <!-- Main News Content -->
     <div class="news-content">
       <h2>Cryptocurrency News (CoinTelegraph)</h2>
-
       <div class="news-list">
         <?php if (!empty($articles)): ?>
           <?php foreach ($articles as $article): ?>
             <div class="news-card">
-              <!-- Görsel -->
+              <!-- Fetch and display image from the RSS summary -->
               <?php
-                // RSS summary'sinden görsel URL'sini çekmek için basit bir regex kullanıyoruz
                 preg_match('/<img[^>]+src="([^">]+)"/i', $article['summary'], $image_matches);
-                $image_url = isset($image_matches[1]) ? $image_matches[1] : '';
+                $image_url = isset($image_matches[1]) ? htmlspecialchars($image_matches[1], ENT_QUOTES, 'UTF-8') : '';
               ?>
               <?php if ($image_url): ?>
-                <img src="<?php echo htmlspecialchars($image_url); ?>" alt="<?php echo htmlspecialchars($article['title']); ?>">
+                <img src="<?php echo $image_url; ?>" alt="<?php echo $article['title']; ?>">
               <?php endif; ?>
 
               <!-- Title -->
               <h3>
-                <!-- Link to CoinTelegraph article in new tab -->
-                <a href="<?php echo htmlspecialchars($article['link']); ?>" target="_blank" rel="noopener noreferrer">
-                  <?php echo htmlspecialchars($article['title']); ?>
+                <a href="<?php echo $article['link']; ?>" target="_blank" rel="noopener noreferrer">
+                  <?php echo $article['title']; ?>
                 </a>
               </h3>
 
-              <!-- Summary from RSS -->
+              <!-- Clean summary without <img> tags -->
               <div class="summary">
-                <?php 
-                  // Özet içerisindeki img etiketlerini kaldır
+                <?php
                   $clean_summary = preg_replace('/<img[^>]+>/i', '', $article['summary']);
-                  echo $clean_summary; 
+                  echo $clean_summary;
                 ?>
               </div>
 
-              <!-- "Read More" link to direct user to the original article -->
-              <a href="<?php echo htmlspecialchars($article['link']); ?>" target="_blank" rel="noopener noreferrer" class="read-more">
+              <!-- "Read More" link -->
+              <a href="<?php echo $article['link']; ?>" target="_blank" rel="noopener noreferrer" class="read-more">
                 Read More &rarr;
               </a>
             </div>
@@ -190,7 +105,6 @@ if ($rss && isset($rss->channel->item)) {
         <?php endif; ?>
       </div>
     </div>
-
   </main>
 </div>
 

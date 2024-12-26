@@ -13,29 +13,34 @@ $conn = new mysqli($servername, $username, $password, $dbname, $port);
 if ($conn->connect_error) {
     die("Bağlantı hatası: " . $conn->connect_error);
 }
+
 $sql = "CREATE TABLE IF NOT EXISTS users (
     Email TEXT NULL,
     Password TEXT NULL,
     Role TEXT NULL,
     Phone TEXT NULL
   )";
-  
-  // Execute the query to create the table
-  if ($conn->query($sql) === true) {
-  } else {
-    echo "Error creating table: " . $conn->error;
-  }
-// Process form data when the form is submitted
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = $_POST['email'];
-    $phone = $_POST['phone'];
-    $password = $_POST['password']; // Store this password in plaintext
 
-    // Vulnerable SQL query: Directly storing sensitive information in plaintext
-    $sql = "INSERT INTO users (email, phone, password) VALUES ('$email', '$phone', '$password')";
+// Execute the query to create the table
+if ($conn->query($sql) === true) {
+} else {
+    echo "Error creating table: " . $conn->error;
+}
+
+// NON-VULNERABLE: Process form data when the form is submitted
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $email = $conn->real_escape_string($_POST['email']); // Use real_escape_string to prevent SQL injection
+    $phone = $conn->real_escape_string($_POST['phone']);
+    $password = $_POST['password'];
+
+    // Hash the password using password_hash()
+    $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
+
+    // Secure SQL query to insert data
+    $sql = "INSERT INTO users (Email, Phone, Password) VALUES ('$email', '$phone', '$hashedPassword')";
 
     if ($conn->query($sql) === true) {
-        echo "Kayıt başarılı! ";
+        echo "Kayıt başarılı!";
     } else {
         echo "Hata: " . $sql . "<br>" . $conn->error;
     }
@@ -43,6 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $conn->close();
 ?>
+
 <style>
   /* Specific styles for login and signup pages */
   #login-page, #signup-page {
@@ -118,6 +124,7 @@ $conn->close();
     color: #1f5f85;
   }
 </style>
+
 <body id="signup-page">
     <h1>Signup</h1>
     <form id="signup-form" action="#" method="POST">
@@ -133,4 +140,5 @@ $conn->close();
         <a href="login.php">Already have an account? Login</a>
     </form>
 </body>
-<?php include '../includes/footer.php'; ?>
+
+<?php include './footer.php'; ?>
